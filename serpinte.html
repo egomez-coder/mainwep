@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juego de la Serpiente</title>
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    #scoreBoard {
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    canvas {
+      background-color: #000000;
+      border: 4px solid #4CAF50;
+      box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+    }
+    .instructions {
+      margin-top: 15px;
+      color: #aaa;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="scoreBoard">Puntaje: <span id="score">0</span></div>
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
+  <div class="instructions">Usa las flechas del teclado para mover la serpiente.</div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreElement = document.getElementById("score");
+
+    const gridSize = 20;
+    const tileCount = canvas.width / gridSize;
+
+    let snake = [{ x: 10, y: 10 }];
+    let dx = 1;
+    let dy = 0;
+    let appleX = 5;
+    let appleY = 5;
+    let score = 0;
+    let gameInterval;
+    let changingDirection = false;
+
+    document.addEventListener("keydown", changeDirection);
+    resetApple();
+    gameInterval = setInterval(gameLoop, 100);
+
+    function gameLoop() {
+      if (isGameOver()) {
+        clearInterval(gameInterval);
+        alert(`¡Has chocado! Juego terminado.\nPuntaje total: ${score}`);
+        resetGame();
+        return;
+      }
+
+      changingDirection = false;
+      clearCanvas();
+      drawApple();
+      moveSnake();
+      drawSnake();
+    }
+
+    function clearCanvas() {
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawSnake() {
+      snake.forEach((part, index) => {
+        // La cabeza es de un verde más brillante
+        ctx.fillStyle = index === 0 ? "#4CAF50" : "#81C784";
+        ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 1, gridSize - 1);
+      });
+    }
+
+    function drawApple() {
+      ctx.fillStyle = "#FF5252";
+      ctx.fillRect(appleX * gridSize, appleY * gridSize, gridSize - 1, gridSize - 1);
+    }
+
+    function moveSnake() {
+      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+      snake.unshift(head);
+
+      // Si la serpiente come la manzana
+      if (head.x === appleX && head.y === appleY) {
+        score += 10;
+        scoreElement.innerText = score;
+        resetApple();
+      } else {
+        // Si no come, remueve el último segmento para mantener el tamaño
+        snake.pop();
+      }
+    }
+
+    function resetApple() {
+      appleX = Math.floor(Math.random() * tileCount);
+      appleY = Math.floor(Math.random() * tileCount);
+
+      // Evita que la manzana aparezca dentro del cuerpo de la serpiente
+      snake.forEach(part => {
+        if (part.x === appleX && part.y === appleY) {
+          resetApple();
+        }
+      });
+    }
+
+    function changeDirection(event) {
+      const LEFT_KEY = 37;
+      const RIGHT_KEY = 39;
+      const UP_KEY = 38;
+      const DOWN_KEY = 40;
+
+      if (changingDirection) return;
+
+      const keyPressed = event.keyCode;
+      const goingUp = dy === -1;
+      const goingDown = dy === 1;
+      const goingRight = dx === 1;
+      const goingLeft = dx === -1;
+
+      if (keyPressed === LEFT_KEY && !goingRight) {
+        dx = -1;
+        dy = 0;
+        changingDirection = true;
+      }
+      if (keyPressed === UP_KEY && !goingDown) {
+        dx = 0;
+        dy = -1;
+        changingDirection = true;
+      }
+      if (keyPressed === RIGHT_KEY && !goingLeft) {
+        dx = 1;
+        dy = 0;
+        changingDirection = true;
+      }
+      if (keyPressed === DOWN_KEY && !goingUp) {
+        dx = 0;
+        dy = 1;
+        changingDirection = true;
+      }
+    }
+
+    function isGameOver() {
+      // Colisión con las paredes (bordes del canvas)
+      const hitLeft = snake[0].x < 0;
+      const hitRight = snake[0].x >= tileCount;
+      const hitTop = snake[0].y < 0;
+      const hitBottom = snake[0].y >= tileCount;
+
+      if (hitLeft || hitRight || hitTop || hitBottom) return true;
+
+      // Colisión con su propio cuerpo
+      for (let i = 1; i < snake.length; i++) {
+        if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    function resetGame() {
+      snake = [{ x: 10, y: 10 }];
+      dx = 1;
+      dy = 0;
+      score = 0;
+      scoreElement.innerText = score;
+      resetApple();
+      gameInterval = setInterval(gameLoop, 100);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juego de la Serpiente</title>
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    #scoreBoard {
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    #gameContainer {
+      position: relative;
+      width: 400px;
+      height: 400px;
+    }
+    canvas {
+      background-color: #000000;
+      border: 4px solid #4CAF50;
+      box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+      box-sizing: border-box;
+    }
+    #menuOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 400px;
+      height: 400px;
+      background-color: rgba(0, 0, 0, 0.88);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 4px solid #4CAF50;
+      box-sizing: border-box;
+    }
+    #menuTitle {
+      font-size: 2.5rem;
+      color: #4CAF50;
+      text-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
+      margin: 0 0 20px 0;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    #finalScoreText {
+      font-size: 1.2rem;
+      color: #fff;
+      margin-bottom: 20px;
+      display: none;
+    }
+    #startBtn {
+      padding: 12px 32px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #ffffff;
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4);
+      transition: background-color 0.2s, transform 0.1s;
+    }
+    #startBtn:hover {
+      background-color: #45a049;
+    }
+    #startBtn:active {
+      transform: scale(0.95);
+    }
+    .instructions {
+      margin-top: 15px;
+      color: #aaa;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="scoreBoard">Puntaje: <span id="score">0</span></div>
+
+  <div id="gameContainer">
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    
+    <div id="menuOverlay">
+      <h1 id="menuTitle">SNAKE PLAY</h1>
+      <p id="finalScoreText"></p>
+      <button id="startBtn">JUGAR</button>
+    </div>
+  </div>
+
+  <div class="instructions">Usa las Flechas o las teclas <b>W, A, S, D</b> para moverte.</div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreElement = document.getElementById("score");
+    const startBtn = document.getElementById("startBtn");
+    const menuOverlay = document.getElementById("menuOverlay");
+    const menuTitle = document.getElementById("menuTitle");
+    const finalScoreText = document.getElementById("finalScoreText");
+
+    const gridSize = 20;
+    const tileCount = canvas.width / gridSize;
+
+    let snake = [];
+    let dx = 1;
+    let dy = 0;
+    let appleX = 5;
+    let appleY = 5;
+    let score = 0;
+    let gameInterval = null;
+    let changingDirection = false;
+    let gameRunning = false;
+
+    document.addEventListener("keydown", changeDirection);
+    startBtn.addEventListener("click", startGame);
+
+    function startGame() {
+      menuOverlay.style.display = "none";
+
+      if (gameInterval) clearInterval(gameInterval);
+
+      snake = [{ x: 10, y: 10 }];
+      dx = 1;
+      dy = 0;
+      score = 0;
+      scoreElement.innerText = score;
+      gameRunning = true;
+      changingDirection = false;
+
+      resetApple();
+      gameInterval = setInterval(gameLoop, 100);
+    }
+
+    function gameLoop() {
+      if (isGameOver()) {
+        clearInterval(gameInterval);
+        gameRunning = false;
+        
+        // Mostrar pantalla de fin de juego en la misma interfaz
+        menuTitle.innerText = "GAME OVER";
+        finalScoreText.innerText = `Puntaje total: ${score}`;
+        finalScoreText.style.display = "block";
+        startBtn.innerText = "JUGAR DE NUEVO";
+        menuOverlay.style.display = "flex";
+        return;
+      }
+
+      changingDirection = false;
+      clearCanvas();
+      drawApple();
+      moveSnake();
+      drawSnake();
+    }
+
+    function clearCanvas() {
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawSnake() {
+      snake.forEach((part, index) => {
+        ctx.fillStyle = index === 0 ? "#4CAF50" : "#81C784";
+        ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 1, gridSize - 1);
+      });
+    }
+
+    function drawApple() {
+      ctx.fillStyle = "#FF5252";
+      ctx.fillRect(appleX * gridSize, appleY * gridSize, gridSize - 1, gridSize - 1);
+    }
+
+    function moveSnake() {
+      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+      snake.unshift(head);
+
+      if (head.x === appleX && head.y === appleY) {
+        score += 10;
+        scoreElement.innerText = score;
+        resetApple();
+      } else {
+        snake.pop();
+      }
+    }
+
+    function resetApple() {
+      appleX = Math.floor(Math.random() * tileCount);
+      appleY = Math.floor(Math.random() * tileCount);
+
+      snake.forEach(part => {
+        if (part.x === appleX && part.y === appleY) {
+          resetApple();
+        }
+      });
+    }
+
+    function changeDirection(event) {
+      if (!gameRunning || changingDirection) return;
+
+      const key = event.key.toLowerCase();
+      const keyCode = event.keyCode;
+
+      const goingUp = dy === -1;
+      const goingDown = dy === 1;
+      const goingRight = dx === 1;
+      const goingLeft = dx === -1;
+
+      if ((keyCode === 37 || key === 'a') && !goingRight) {
+        dx = -1;
+        dy = 0;
+        changingDirection = true;
+      }
+      if ((keyCode === 38 || key === 'w') && !goingDown) {
+        dx = 0;
+        dy = -1;
+        changingDirection = true;
+      }
+      if ((keyCode === 39 || key === 'd') && !goingLeft) {
+        dx = 1;
+        dy = 0;
+        changingDirection = true;
+      }
+      if ((keyCode === 40 || key === 's') && !goingUp) {
+        dx = 0;
+        dy = 1;
+        changingDirection = true;
+      }
+    }
+
+    function isGameOver() {
+      const hitLeft = snake[0].x < 0;
+      const hitRight = snake[0].x >= tileCount;
+      const hitTop = snake[0].y < 0;
+      const hitBottom = snake[0].y >= tileCount;
+
+      if (hitLeft || hitRight || hitTop || hitBottom) return true;
+
+      for (let i = 1; i < snake.length; i++) {
+        if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+  </script>
+</body>
+</html>
